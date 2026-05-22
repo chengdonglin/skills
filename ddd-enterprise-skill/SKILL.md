@@ -143,11 +143,11 @@ device.setStatus()
 Must load:
 
 ```text
-reference/ddd-rules.md
-reference/naming.md
-reference/chain-rule.md
-reference/template-pattern-design.md
-reference/strategy-pattern-design.md
+references/ddd-rules.md
+references/naming.md
+references/chain-rule.md
+references/template-pattern-design.md
+references/strategy-pattern-design.md
 ```
 
 These override default generation behavior.
