@@ -1,136 +1,110 @@
 ---
-
 name: enterprise-ddd-generator
-description: Generate enterprise-grade multi-module Java DDD code from live MySQL schema and business requirements.
-version: 1.0.0
-author: linchengdong
-license: MIT
-
-
+description: Generate enterprise-grade multi-module Java DDD code from business requirements and live database schema. Automatically inspect database structure using scripts, infer aggregates, choose proper design patterns, and generate extensible Spring Boot + MyBatis Plus implementations.
 ---
 
 # Enterprise DDD Generator
 
-Generate enterprise-grade Spring Boot 3 + MyBatis Plus DDD code using:
+根据：
 
-- live database schema
-- business requirement
-- request parameters
-- design pattern references
+- 用户业务需求
+- 数据库名称
+- 当前数据库实时表结构
+
+自动生成：
+
+- 企业级多模块 DDD 工程
+- Spring Boot 3
+- MyBatis Plus
+- 可运行
+- 可扩展
+- Rich Domain Model
+- 优雅设计模式驱动
 
 ---
 
-# Inputs
+# Activation Conditions
 
-Required:
+当用户提供：
 
-## database
+- 开发需求
+- 数据库名称
 
-MySQL database name
-
-Example:
+例如：
 
 ```text
-aigc_prod
+数据库：aigc_prod
+
+需求：
+
+实现设备激活模块
+支持：
+- 激活
+- 状态校验
+- 幂等
 ```
+
+必须激活 Skill。
 
 ---
 
-## request
+# Required Workflow
 
-Request object name
-
-Example:
-
-```text
-ActivateDeviceRequest
-```
+必须严格执行。
 
 ---
 
-## requirement
+# Step 1：读取数据库结构
 
-Business requirement
-
-Example:
-
-```text
-实现设备激活模块，支持幂等、状态校验、生命周期管理
-```
-
----
-
-# Tools
-
-This skill uses:
-
-## Python Script Execution
-
-Execute:
+执行：
 
 ```bash
-python scripts/load_schema.py <database>
+python scripts/load_schema.py <database_name>
 ```
 
-Produces:
-
-```json
-schema.json
-```
-
-Used as source of truth.
-
----
-
-# Runtime Workflow
-
-## Step 1 — Inspect Schema
-
-Run:
-
-```bash
-python scripts/load_schema.py <database>
-```
-
-Read:
+读取：
 
 - tables
 - columns
-- pk
-- fk
 - indexes
-- comments
+- foreign keys
+- constraints
 
-Generate:
+生成：
 
 ```json
 schema.json
 ```
 
-Never invent schema.
+禁止臆造字段。
+
+必须严格依据真实 schema。
 
 ---
 
-## Step 2 — Infer DDD Model
+# Step 2：分析业务需求
 
-Infer:
+提取：
 
-- aggregate root
-- child entities
-- value objects
-- repository boundary
-- domain service
-- domain events
+- 生命周期行为
+- 状态流转
+- 核心业务动作
+- 校验规则
+- 聚合边界候选
 
-Must prefer rich domain behavior.
+例如：
 
-Correct:
+```text
+设备激活
+```
+
+推导：
 
 ```java
 device.activate()
 ```
 
-Wrong:
+禁止：
 
 ```java
 device.setStatus()
@@ -138,115 +112,207 @@ device.setStatus()
 
 ---
 
-## Step 3 — Load References
+# Step 3：推导领域模型
 
-Must load:
+识别：
 
-```text
-references/ddd-rules.md
-references/naming.md
-references/chain-rule.md
-references/template-pattern-design.md
-references/strategy-pattern-design.md
-```
+## Aggregate Root
 
-These override default generation behavior.
+例如：
 
----
-
-## Step 4 — Load Assets
-
-Use:
-
-```text
-assets/aggregate.java
-assets/repository.java
-assets/factory.java
-assets/strategy.java
-assets/chain.java
-assets/specification.java
-```
-
-Generated code must match style.
-
----
-
-## Step 5 — Select Patterns
-
-Automatically choose:
-
-### Chain
-
-Sequential workflow
-
-Reference:
-
-```text
-reference/chain-rule.md
+```java
+Device
+Order
+UploadTask
 ```
 
 ---
 
-### Template
+## Child Entity
 
-Stable lifecycle workflow
+存在生命周期依附对象时生成。
 
-Reference:
+---
 
-```text
-reference/template-pattern-design.md
+## Value Object
+
+例如：
+
+```java
+DeviceNumber
+UploadStatus
 ```
 
 ---
 
-### Strategy
+## Repository Interface
 
-Behavior switching by type
+定义领域仓储。
 
-Reference:
+---
 
-```text
-reference/strategy-pattern-design.md
+## Domain Service
+
+仅在跨聚合业务时生成。
+
+---
+
+# Step 4：自动推导设计模式
+
+
+---
+
+## Strategy Pattern
+
+触发条件：
+
+存在：
+
+- type
+- mode
+- protocol
+- route
+
+生成：
+
+```java
+XXXStrategy
+XXXStrategyRegistry
+```
+
+禁止：
+
+```java
+if(type == ...)
 ```
 
 ---
 
-### Specification
+## Factory Pattern
 
-Complex domain rule validation
+必须生成：
 
----
+```java
+XXXFactory
+```
 
-### Factory
+用于聚合创建。
 
-Always generate aggregate factory
-
-Forbidden:
+禁止直接：
 
 ```java
 new Aggregate()
 ```
 
-inside application layer.
+---
+
+## Chain of Responsibility
+
+触发条件：
+
+- 多阶段流程
+- 生命周期流水线
+- 校验管道
+
+生成：
+
+```java
+XXXProcessChain
+```
+
+必须支持自动注册扩展。
 
 ---
 
-## Step 6 — Generate Project
+## Specification Pattern
 
-Must generate:
+复杂校验规则：
 
-```text
-project-parent
- ├── project-interfaces
- ├── project-application
- ├── project-domain
- ├── project-infrastructure
- └── project-shared
+```java
+XXXSpecification
 ```
 
-Never flat CRUD structure.
+禁止：
 
-Forbidden:
+```java
+if (...) throw ...
+```
+
+---
+
+## Template Method
+
+流程骨架稳定时生成：
+
+```java
+AbstractXXXProcessor
+```
+
+---
+
+## Domain Event
+
+状态变化生成：
+
+```java
+XXXCreatedEvent
+XXXActivatedEvent
+XXXCompletedEvent
+```
+
+领域内部记录：
+
+```java
+domainEvents.add(...)
+```
+
+应用层统一发布。
+
+---
+
+# Step 5：加载资源规范
+
+读取：
+
+- references/ddd-rules.md
+- references/patterns.md
+- references/naming.md
+
+确保统一架构。
+
+---
+
+# Step 6：参考代码模板
+
+参考：
+
+- assets/aggregate.java
+- assets/repository.java
+- assets/factory.java
+- assets/strategy.java
+- assets/chain.java
+- assets/specification.java
+
+统一生成风格。
+
+---
+
+# Step 7：生成多模块工程
+
+必须生成：
+
+```text
+${project-name}-parent
+ ├── ${project-name}-interfaces
+ ├── ${project-name}-application
+ ├── ${project-name}-domain
+ ├── ${project-name}-infrastructure
+ └── ${project-name}-shared
+```
+
+禁止单 module。
+
+禁止：
 
 ```text
 controller
@@ -255,132 +321,349 @@ mapper
 entity
 ```
 
+混杂结构。
+
 ---
 
-# Layer Rules
+# Module Responsibilities
 
 ## interfaces
 
-Generate:
+职责：
 
 - Controller
 - Request DTO
 - Response DTO
 - Assembler
+- 参数校验
+- HTTP 协议适配
 
-No business logic.
+依赖：
+
+```text
+application
+shared
+```
+
+禁止：
+
+- Repository
+- Mapper
+- Domain规则
+
+控制器必须极薄：
+
+```java
+assembler.toCommand(request)
+applicationService.execute()
+```
 
 ---
 
 ## application
 
-Generate:
+职责：
+
+业务用例编排。
+
+包含：
 
 - ApplicationService
-- UseCase orchestration
-- transaction boundary
-- event publish
-- pattern assembly
+- Transaction Boundary
+- 聚合协调
+- Event Publish
 
-No persistence details.
+依赖：
+
+```text
+domain
+shared
+```
+
+禁止：
+
+- SQL
+- Mapper
+- 持久化细节
+
+原则：
+
+一个 public method = 一个业务能力
+
+例如：
+
+```java
+activate()
+register()
+heartbeat()
+```
 
 ---
 
 ## domain
 
-Generate:
+职责：
+
+核心业务。
+
+包含：
 
 - AggregateRoot
 - Entity
 - ValueObject
-- DomainService
-- Repository interface
-- DomainEvent
-- Specification
 - Factory
+- Specification
+- DomainEvent
+- Repository Interface
+- DomainService
 
-Must be pure domain.
+依赖：
 
-No infrastructure dependency.
+```text
+shared
+```
+
+禁止依赖：
+
+```text
+application
+interfaces
+infrastructure
+```
+
+必须 Rich Domain：
+
+正确：
+
+```java
+device.activate()
+```
+
+错误：
+
+```java
+device.setStatus()
+```
 
 ---
 
 ## infrastructure
 
-Generate:
+职责：
 
-- PO
-- Mapper
+技术实现。
+
+包含：
+
 - RepositoryImpl
-- Convertor
+- Mapper
+- PO
+- Redis Adapter
+- MQ Adapter
+- RPC Adapter
 
-No business decision logic.
+依赖：
+
+```text
+domain
+shared
+```
+
+禁止业务规则。
 
 ---
 
 ## shared
 
-Generate:
+职责：
+
+基础能力共享。
+
+包含：
 
 - Result
-- Exception
+- BaseException
 - Constants
 - BaseEnum
 
-No business logic.
+禁止业务逻辑。
 
 ---
 
-# Output Contract
+# Dependency Rules (Strict)
 
-Must output in order:
-
-## 1 Schema Analysis
-
-Explain:
-
-- tables
-- fk
-- aggregate reasoning
-
----
-
-## 2 DDD Modeling Decision
-
-Explain:
-
-- aggregate split
-- selected patterns
-
----
-
-## 3 Project Tree
+允许：
 
 ```text
-...
+interfaces -> application
+application -> domain
+infrastructure -> domain
+all -> shared
+```
+
+禁止：
+
+```text
+domain -> infrastructure
+domain -> application
+application -> interfaces
+```
+
+违反时必须修正。
+
+---
+
+# MyBatis Plus Rules
+
+PO：
+
+```java
+DevicePO
+```
+
+Mapper：
+
+```java
+DeviceMapper
+```
+
+RepositoryImpl：
+
+负责：
+
+PO <-> Domain 转换
+
+不得包含业务规则。
+
+字段必须与数据库一致。
+
+禁止新增不存在字段。
+
+---
+
+# Naming Rules
+
+允许：
+
+```java
+DeviceFactory
+DeviceRepository
+DeviceAssembler
+DeviceActivateSpecification
+DeviceProcessChain
+DeviceStrategyRegistry
+```
+
+禁止：
+
+```java
+DeviceUtil
+CommonService
+Helper
+Manager
+BaseBusiness
 ```
 
 ---
 
-## 4 Complete Code Files
+# Output Order (Mandatory)
 
-Requirements:
+必须严格按以下顺序输出。
 
-- directly runnable
-- no TODO
-- no pseudo code
-- production grade
+---
+
+## 1. Schema 分析
+
+说明：
+
+- 使用了哪些表
+- 字段作用
+- 外键关系
+- 聚合边界依据
+
+---
+
+## 2. DDD 建模说明
+
+解释：
+
+- 为什么这样划分聚合
+- 为什么选择这些设计模式
+
+---
+
+## 3. 模块职责说明
+
+解释：
+
+- interfaces
+- application
+- domain
+- infrastructure
+- shared
+
+各自作用。
+
+---
+
+## 4. Maven 多模块目录结构
+
+输出：
+
+```text
+tree structure
+```
+
+---
+
+## 5. 完整代码文件
+
+格式：
+
+```java
+// 职责：设备聚合根
+public class Device
+```
+
+代码必须：
+
+- 可直接运行
+- 风格统一
+- 可扩展
+- 企业级优雅
+
+---
+
+# Ambiguous Rules
+
+如果需求不完整：
+
+优先依据：
+
+1. 数据库结构
+2. 表关系
+3. references 规范
+4. assets 模板
+
+自动补全最佳实践。
+
+禁止退化成 CRUD。
 
 ---
 
 # Quality Standard
 
-Generated code must reflect:
+生成代码必须像：
 
-- high cohesion
-- low coupling
-- OCP
-- plugin extensibility
-- maintainability
+大型企业资深架构师编写。
 
-Never generate tutorial/demo code.
+必须具备：
+
+- 高内聚
+- 低耦合
+- 开闭原则
+- 自动扩展能力
+- 插件化设计
+- 工程可维护性
+
+绝不生成教学式 Demo。
